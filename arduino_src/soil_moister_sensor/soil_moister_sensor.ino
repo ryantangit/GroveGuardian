@@ -20,7 +20,7 @@ void loop()
     digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
     delay(1000);  
     message = Serial.readString();
-    messageReady = true;
+      messageReady = true;
   }
   if(messageReady) {
     // The only messages we'll parse will be formatted in JSON
@@ -29,7 +29,6 @@ void loop()
     
     DeserializationError error = deserializeJson(doc,message);
     if(error) {
-      Serial.print(message);
       Serial.print(F("deserializeJson() failed: "));
       Serial.println(error.c_str());
       messageReady = false;
@@ -42,7 +41,9 @@ void loop()
       int percentageHumidity = map(soilSensorVal, wet, dry, 100, 0);
       doc["humidity"] = String(percentageHumidity) + "%";
       serializeJson(doc,Serial);
+      Serial.println();
     }
+    
     messageReady = false;
   }
 }
