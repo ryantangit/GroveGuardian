@@ -7,15 +7,36 @@ const { width } = Dimensions.get("window");
 
 export default function PlantDashboard() {
   const [plantReadings, setPlantReadings] = useState<any[]>([]);
+  const [statusColor, setStatusColor] = useState(["#4CAF50", "#2E7D32"]);
+  const [statusText, setStatusText] = useState("Healthy & Thriving");
 
   useEffect(() => {
     const fetchRecentReading = async () => {
       try {
+        // for local use:
         const response = await fetch("http://10.0.0.207:8000/getUpdate");
+        // for cloud use:
+        // http://4.242.221.245:8000/getUpdate
         const data = await response.json();
-        
+
         if (data) {
-          setPlantReadings([data]);  
+          const moisture = parseInt(data.message);
+          const { status, gradient } = getStatusProps(moisture);
+
+          setStatusText(status);
+          setStatusColor(gradient);
+
+          setPlantReadings((prevReadings) => {
+            const isDuplicate =
+              prevReadings.length > 0 &&
+              prevReadings[0].timestamp === data.timestamp;
+
+            if (!isDuplicate) {
+              return [data, ...prevReadings];
+            } else {
+              return prevReadings;
+            }
+          });
         }
       } catch (error) {
         console.error("Error fetching data: ", error);
@@ -23,37 +44,70 @@ export default function PlantDashboard() {
     };
 
     fetchRecentReading();
+    const interval = setInterval(fetchRecentReading, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#4CAF50", "#2E7D32"]} style={styles.statusCard}>
+      <LinearGradient colors={statusColor} style={styles.statusCard}>
         <Ionicons name="leaf" size={width * 0.12} color="white" />
-        <Text style={styles.statusTitle}>Healthy & Thriving</Text>
-        <Text style={styles.statusDetail}>Moisture Level: 45%</Text>
+        <Text style={styles.statusTitle}>{statusText}</Text>
+        {plantReadings[0] && (
+          <Text style={styles.statusDetail}>
+            Moisture Level: {plantReadings[0].message}%
+          </Text>
+        )}
       </LinearGradient>
 
-      {/* Previous Readings */}
       <Text style={styles.readingsTitle}>Recent Moisture Readings</Text>
       <FlatList
         data={plantReadings}
-        keyExtractor={(item, index) => index.toString()} 
-        renderItem={({ item }) => (
-          <View style={styles.readingItem}>
-            <View style={styles.readingLeft}>
-              <Ionicons name="calendar" size={width * 0.06} color="#4CAF50" />
-              <Text style={styles.readingDate}>{item.timestamp}</Text>
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => {
+          const moisture = parseInt(item.message);
+          const { label, color } = getStatusDisplay(moisture);
+
+          return (
+            <View style={styles.readingItem}>
+              <View style={styles.readingLeft}>
+                <Ionicons name="calendar" size={width * 0.06} color="#4CAF50" />
+                <Text style={styles.readingDate}>{item.timestamp}</Text>
+              </View>
+              <View style={styles.readingRight}>
+                <Text style={styles.readingMoisture}>{item.message}%</Text>
+                <Text style={[styles.readingStatus, { color }]}>{label}</Text>
+              </View>
             </View>
-            <View style={styles.readingRight}>
-              <Text style={styles.readingMoisture}>{item.message}</Text>
-              <Text style={styles.readingStatus}>Status: Good</Text>
-            </View>
-          </View>
-        )}
+          );
+        }}
       />
     </View>
   );
 }
+
+const getStatusProps = (moisture: number) => {
+  if (moisture <= 30 || moisture > 60) {
+    return {
+      status: "Warning: Check Moisture",
+      gradient: ["#FFD54F", "#FFA000"], // Yellow
+    };
+  }
+  return {
+    status: "Healthy & Thriving",
+    gradient: ["#4CAF50", "#2E7D32"],
+  };
+};
+
+const getStatusDisplay = (moisture: number) => {
+  if (moisture <= 30) {
+    return { label: "Status: Too Dry", color: "#FFA000" }; 
+  } else if (moisture > 60) {
+    return { label: "Status: Too Wet", color: "#FFA000" };
+  } else {
+    return { label: "Status: Good", color: "#4CAF50" }; 
+  }
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -112,18 +166,18 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   readingRight: {
-    flexDirection: "column",  
-    alignItems: "flex-start",  
-    marginTop: "5%",  
+    flexDirection: "column",
+    alignItems: "flex-start",
+    marginTop: "5%",
   },
   readingMoisture: {
     fontSize: width * 0.045,
     fontWeight: "bold",
-    color: "#4CAF50",
+    color: "#000000",
     marginBottom: "2%",
   },
   readingStatus: {
     fontSize: width * 0.04,
-    color: "#666",
+    fontWeight: "bold",
   },
 });

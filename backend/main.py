@@ -59,14 +59,19 @@ class TestUpdateRequest(BaseModel):
 @app.post("/testUpdate")
 def test_update(request: TestUpdateRequest, db: Session = Depends(get_db)):
     new_record = HelloTest(message=request.message, timestamp=datetime.now(timezone.utc))
-   
+    # create new endpt
+    # unwrap message to int here
+    # query most recent entry
+    # compare percemtages --> if difference is >=10, then only post, else dont update
     db.add(new_record)
     db.commit()
     db.refresh(new_record)  
     
+    # only return time + percentage
     return {"id": new_record.id, "message": new_record.message, "timestamp": new_record.timestamp} 
 
-# Get most recent entry from the database
+# Frontend Calls this
+# Get most recent entry from the database 
 @app.get("/getUpdate")
 def get_update(db: Session = Depends(get_db)):
     recent_entry = db.query(HelloTest).order_by(desc(HelloTest.timestamp)).first()
@@ -80,3 +85,36 @@ def get_update(db: Session = Depends(get_db)):
         "timestamp": recent_entry.timestamp
     }
 
+# Sensor calls this endpt
+@app.post("/smartUpdate")
+def smart_update(request: TestUpdateRequest, db: Session = Depends(get_db)):
+    try:
+        new_value = int(request.message)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Message must be a numeric string")
+
+    # Get the most recent reading
+    recent_entry = db.query(HelloTest).order_by(desc(HelloTest.timestamp)).first()
+
+    if recent_entry:
+        try:
+            recent_value = int(recent_entry.message)
+        except ValueError:
+            recent_value = 0  # Fallback if DB entry was corrupted or bad format
+
+        if abs(new_value - recent_value) < 2:
+            return {"message": "No significant change"}
+
+    # If difference is ≥ 10 or there's no previous entry, save it
+    new_record = HelloTest(
+        message=str(new_value),
+        timestamp=datetime.now(timezone.utc)
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+
+    return {
+        "message": new_value,
+        "timestamp": new_record.timestamp
+    }
