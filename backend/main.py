@@ -104,8 +104,11 @@ def smart_update(request: TestUpdateRequest, db: Session = Depends(get_db)):
 
         if abs(new_value - recent_value) < 2:
             return {"message": "No significant change"}
+        
+        if new_value < 0:
+            new_value = 0
 
-    # If difference is ≥ 10 or there's no previous entry, save it
+    # If difference is ≥ 2 or there's no previous entry, save it
     new_record = HelloTest(
         message=str(new_value),
         timestamp=datetime.now(timezone.utc)

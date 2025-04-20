@@ -53,7 +53,7 @@ export default function PlantDashboard() {
 
     fetchRecentReading();
     // Adjust interval for how frequently state is updated
-    const interval = setInterval(fetchRecentReading, 3000);
+    const interval = setInterval(fetchRecentReading, 1000);
     return () => {
       clearInterval(interval);
       unloadSound();
@@ -124,7 +124,7 @@ export default function PlantDashboard() {
                 <Text style={styles.readingDate}>
                 {(() => {
                   const date = new Date(item.timestamp);
-                  const pstDate = new Date(date.getTime() - 8 * 60 * 60 * 1000);
+                  const pstDate = new Date(date.getTime() - 7 * 60 * 60 * 1000);
                   return pstDate.toLocaleString('en-US');
                 })()}
               </Text>
@@ -170,7 +170,7 @@ const getStatusProps = (moisture: number) => {
 const getStatusDisplay = (moisture: number) => {
   if (moisture <= 30) {
     return { label: "Status: Too Dry", color: "#FFA000" };
-  } else if (moisture > 60) {
+  } else if (moisture > 70) {
     return { label: "Status: Too Wet", color: "#0000FF" };
   } else {
     return { label: "Status: Good", color: "#4CAF50" };
