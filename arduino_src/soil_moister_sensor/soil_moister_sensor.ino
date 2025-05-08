@@ -1,13 +1,20 @@
 #include <ArduinoJson.h>
 
-const int wet = 203;
-const int dry = 456;
+const int wet = 190;
+const int dry = 475;
 String message = "";
 bool messageReady = false;
+
+const int LED_YELLOW = 4;
+const int LED_GREEN = 5;
+const int LED_BLUE = 6;
 
 void setup()
 {
   Serial.begin(9600);
+  pinMode(LED_YELLOW, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_BLUE, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
@@ -39,11 +46,25 @@ void loop()
       // Get data from analog sensors
       int soilSensorVal = analogRead(A0);
       int percentageHumidity = map(soilSensorVal, wet, dry, 100, 0);
-      doc["humidity"] = String(percentageHumidity) + "%";
+      if (percentageHumidity < 30) {
+        digitalWrite(LED_YELLOW, HIGH);
+        digitalWrite(LED_GREEN, LOW);
+        digitalWrite(LED_BLUE, LOW);
+      }
+      if (percentageHumidity >= 30 && percentageHumidity < 70) {
+        digitalWrite(LED_GREEN, HIGH);
+        digitalWrite(LED_BLUE, LOW);
+        digitalWrite(LED_YELLOW, LOW);
+      }
+      if (percentageHumidity > 70) {
+        digitalWrite(LED_BLUE, HIGH);
+        digitalWrite(LED_GREEN, LOW);
+        digitalWrite(LED_YELLOW, LOW);
+      }
+      doc["humidity"] = String(percentageHumidity);
       serializeJson(doc,Serial);
       Serial.println();
     }
-    
     messageReady = false;
   }
 }
